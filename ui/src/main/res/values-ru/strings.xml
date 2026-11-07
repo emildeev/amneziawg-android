@@ -211,6 +211,9 @@
     <string name="quick_settings_tile_add_summary">Элемент переключает последний активный туннель</string>
     <string name="quick_settings_tile_add_failure">Не удается добавить ярлык: ошибка %d</string>
     <string name="quick_settings_tile_action">Переключить туннель</string>
+    <string name="connect_on_launch_summary_off">Не подключаться при открытии приложения</string>
+    <string name="connect_on_launch_summary_on">Поднимать последний использованный туннель при открытии приложения</string>
+    <string name="connect_on_launch_title">Подключаться при запуске</string>
     <string name="restore_on_boot_summary_off">Не поднимать ранее выбранные туннели при загрузке</string>
     <string name="restore_on_boot_summary_on">Поднимать ранее выбранные туннели при загрузке</string>
     <string name="restore_on_boot_title">Восстановить при загрузке</string>

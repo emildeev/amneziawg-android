@@ -59,6 +59,12 @@ object UserKnobs {
             it[RESTORE_ON_BOOT] ?: false
         }
 
+    private val CONNECT_ON_LAUNCH = booleanPreferencesKey("connect_on_launch")
+    val connectOnLaunch: Flow<Boolean>
+        get() = Application.getPreferencesDataStore().data.map {
+            it[CONNECT_ON_LAUNCH] ?: true
+        }
+
     private val LAST_USED_TUNNEL = stringPreferencesKey("last_used_tunnel")
     val lastUsedTunnel: Flow<String?>
         get() = Application.getPreferencesDataStore().data.map {

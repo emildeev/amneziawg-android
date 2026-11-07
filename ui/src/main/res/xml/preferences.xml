@@ -5,6 +5,13 @@
         android:icon="@drawable/ic_icon"
         android:key="version" />
     <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="connect_on_launch"
+        android:singleLineTitle="false"
+        android:summaryOff="@string/connect_on_launch_summary_off"
+        android:summaryOn="@string/connect_on_launch_summary_on"
+        android:title="@string/connect_on_launch_title" />
+    <CheckBoxPreference
         android:defaultValue="false"
         android:key="restore_on_boot"
         android:singleLineTitle="false"

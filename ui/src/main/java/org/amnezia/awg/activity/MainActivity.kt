@@ -6,19 +6,30 @@ package org.amnezia.awg.activity
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.ActionBar
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import androidx.fragment.app.commit
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.amnezia.awg.Application
 import org.amnezia.awg.R
+import org.amnezia.awg.backend.GoBackend
+import org.amnezia.awg.backend.Tunnel
 import org.amnezia.awg.fragment.TunnelDetailFragment
 import org.amnezia.awg.fragment.TunnelEditorFragment
 import org.amnezia.awg.model.ObservableTunnel
+import org.amnezia.awg.util.ErrorMessages
+import org.amnezia.awg.util.UserKnobs
 
 /**
  * CRUD interface for AmneziaWG tunnels. This activity serves as the main entry point to the
@@ -29,6 +40,13 @@ class MainActivity : BaseActivity(), FragmentManager.OnBackStackChangedListener 
     private var actionBar: ActionBar? = null
     private var isTwoPaneLayout = false
     private var backPressedCallback: OnBackPressedCallback? = null
+    private var pendingAutoConnectTunnel: ObservableTunnel? = null
+    private val vpnPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            val tunnel = pendingAutoConnectTunnel ?: return@registerForActivityResult
+            pendingAutoConnectTunnel = null
+            bringUp(tunnel)
+        }
 
     private fun handleBackPressed() {
         val backStackEntries = supportFragmentManager.backStackEntryCount
@@ -63,6 +81,55 @@ class MainActivity : BaseActivity(), FragmentManager.OnBackStackChangedListener 
         supportFragmentManager.addOnBackStackChangedListener(this)
         backPressedCallback = onBackPressedDispatcher.addCallback(this) { handleBackPressed() }
         onBackStackChanged()
+        // Only on a real launch from the launcher, not on recreation (rotation etc.).
+        if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN)
+            autoConnect()
+    }
+
+    /**
+     * Brings up the last used tunnel (or the only/first one) when the app is opened,
+     * if "Connect on app launch" is enabled and nothing is connected yet.
+     */
+    private fun autoConnect() {
+        lifecycleScope.launch {
+            try {
+                if (!UserKnobs.connectOnLaunch.first()) return@launch
+                val manager = Application.getTunnelManager()
+                val tunnels = manager.getTunnels()
+                if (tunnels.any { it.state == Tunnel.State.UP }) return@launch
+                val tunnel = manager.lastUsedTunnel ?: tunnels.firstOrNull() ?: return@launch
+                if (Application.getBackend() is GoBackend) {
+                    val permission = GoBackend.VpnService.prepare(this@MainActivity)
+                    if (permission != null) {
+                        pendingAutoConnectTunnel = tunnel
+                        vpnPermissionLauncher.launch(permission)
+                        return@launch
+                    }
+                }
+                bringUp(tunnel)
+            } catch (e: Throwable) {
+                showError(getString(R.string.error_prepare, ErrorMessages[e]), e)
+            }
+        }
+    }
+
+    private fun bringUp(tunnel: ObservableTunnel) {
+        lifecycleScope.launch {
+            try {
+                tunnel.setStateAsync(Tunnel.State.UP)
+            } catch (e: Throwable) {
+                showError(getString(R.string.error_up, ErrorMessages[e]), e)
+            }
+        }
+    }
+
+    private fun showError(message: String, e: Throwable) {
+        Log.e(TAG, message, e)
+        Snackbar.make(findViewById(android.R.id.content), message, Snackbar.LENGTH_LONG).show()
+    }
+
+    companion object {
+        private const val TAG = "AmneziaWG/MainActivity"
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

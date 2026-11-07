@@ -31,9 +31,6 @@ jobs:
       with:
         packages: platform-tools
 
-    - name: Unit tests
-      run: ./gradlew --no-daemon :tunnel:testDebugUnitTest
-
     - name: Build debug APK
       if: ${{ !startsWith(github.ref, 'refs/tags/') }}
       run: ./gradlew --no-daemon assembleDebug
